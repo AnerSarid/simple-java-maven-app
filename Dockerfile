@@ -2,7 +2,7 @@
 FROM maven:3.6.3-jdk-11 as builder
 WORKDIR /app
 COPY . .
-RUN mvn clean package
+RUN mvn clean test package
 
 # Stage 2: Create Docker image
 FROM openjdk:11-jre-slim
