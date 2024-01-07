@@ -10,7 +10,7 @@ terraform {
 
 
 module "aws_ec2_instance" {
-  source                = "/home/anersarid/git/devops/simple-java-maven-app/deploy/"
+  source                = "./deploy"
   aws_region            = "eu-central-1"
   instance_type         = "t2.micro"
   security_group_name   = "java-security"
