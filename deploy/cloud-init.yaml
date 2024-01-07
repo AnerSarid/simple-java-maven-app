@@ -1,0 +1,25 @@
+#cloud-config
+
+runcmd:
+  # Install Docker
+  - [ sh, -c, "curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh" ]
+
+  # Install OpenSSL
+  - [ sh, -c, "apt-get update && apt-get install -y openssl" ]
+
+  # Fetch instance hostname from metadata
+  - [ sh, -c, "hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)" ]
+
+  # Generate Server Key and CSR
+  - [ sh, -c, "openssl genrsa -out /etc/docker/certs/server-key.pem 4096" ]
+  - [ sh, -c, "openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr" ]
+
+  # Sign the server CSR with the CA
+  - [ sh, -c, "openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem" ]
+
+  # Configure Docker to use TLS
+  - [ sh, -c, "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\"}' > /etc/docker/daemon.json" ]
+
+  # Restart Docker
+  - [ sh, -c, "systemctl restart docker" ]
+
