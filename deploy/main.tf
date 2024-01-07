@@ -29,7 +29,7 @@ resource "aws_instance" "example" {
   instance_type = var.instance_type
   key_name		= "ssh_key_1"
   security_groups = [aws_security_group.instance_sg.name]
-  user_data = file("cloud-init.yaml")
+  user_data = file("${path.module}/cloud-init.yaml")
   tags = {
     Name = "simple_java"
   }
