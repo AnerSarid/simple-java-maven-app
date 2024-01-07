@@ -23,6 +23,7 @@ variable "ingress_rules" {
   }))
   default = [
     { from_port = 80, to_port = 80, protocol = "tcp", cidrs = ["0.0.0.0/0"] },
+    { from_port = 22, to_port = 22, protocol = "tcp", cidrs = ["0.0.0.0/0"] },
     { from_port = 8080, to_port = 8080, protocol = "tcp", cidrs = ["0.0.0.0/0"] },
     { from_port = 443, to_port = 443, protocol = "tcp", cidrs = ["0.0.0.0/0"] },
     { from_port = 2376, to_port = 2376, protocol = "tcp", cidrs = ["0.0.0.0/0"] },

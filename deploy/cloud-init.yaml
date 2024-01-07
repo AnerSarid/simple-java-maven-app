@@ -7,6 +7,9 @@ runcmd:
   # Install OpenSSL
   - [ sh, -c, "apt-get update && apt-get install -y openssl" ]
 
+  # Create docker certs directory if it doesn't exist
+  - [ sh, -c, "mkdir -p /etc/docker/certs/" ]
+
   # Fetch instance hostname from metadata
   - [ sh, -c, "hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)" ]
 
@@ -17,9 +20,10 @@ runcmd:
   # Sign the server CSR with the CA
   - [ sh, -c, "openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem" ]
 
-  # Configure Docker to use TLS
-  - [ sh, -c, "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\"}' > /etc/docker/daemon.json" ]
+  # Configure Docker daemon for TLS on port 2376
+  - [ sh, -c, "mkdir -p /etc/docker" ]
+  - [ sh, -c, "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:2376\", \"unix:///var/run/docker.sock\"]}' > /etc/docker/daemon.json" ]
 
-  # Restart Docker
+  # Restart Docker to apply new configuration
   - [ sh, -c, "systemctl restart docker" ]
 
