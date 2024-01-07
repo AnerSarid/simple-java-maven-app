@@ -14,8 +14,6 @@ module "aws_ec2_instance" {
   aws_region            = "eu-central-1"
   instance_type         = "t2.micro"
   security_group_name   = "java-security"
-  ansible_playbook_path = "/home/anersarid/git/devops/elk/deploy_app.yaml"
-  ssh_key_path          = "/home/anersarid/Downloads/ssh_key_1.pem"
   # ... other variables ...
 }
 
