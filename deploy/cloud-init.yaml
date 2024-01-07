@@ -5,30 +5,30 @@ runcmd:
   - ["sh", "-c", "curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh"]
 
   # Modify Docker service file to remove -H fd:// flag
-  - ["sh", "-c", "sudo sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service"]
-
-  # Reload systemd and restart Docker to apply changes
-  - ["sh", "-c", "sudo systemctl daemon-reload"]
-  - ["sh", "-c", "sudo systemctl restart docker"]
+  - ["sh", "-c", "sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service"]
 
   # Install OpenSSL
-  - ["sh", "-c", "sudo apt-get update && sudo apt-get install -y openssl"]
+  - ["sh", "-c", "apt-get update && apt-get install -y openssl"]
 
   # Fetch instance hostname and public IP from metadata
   - ["sh", "-c", "hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)"]
   - ["sh", "-c", "public_ip=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)"]
 
   # Generate Server Key and CSR with IP SANs
-  - ["sh", "-c", "echo 'subjectAltName = IP:$public_ip' > /tmp/cert_config"]
-  - ["sh", "-c", "sudo openssl genrsa -out /etc/docker/certs/server-key.pem 4096"]
-  - ["sh", "-c", "sudo openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config"]
+  - ["sh", "-c", "echo '[ext]' > /tmp/cert_config"]
+  - ["sh", "-c", "echo \"subjectAltName = IP:$public_ip\" >> /tmp/cert_config"]
+  - ["sh", "-c", "openssl genrsa -out /etc/docker/certs/server-key.pem 4096"]
+  - ["sh", "-c", "openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config"]
+
 
   # Sign the server CSR with the CA
-  - ["sh", "-c", "sudo openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions SAN -extfile /tmp/cert_config"]
+  - ["sh", "-c", "openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions ext -extfile /tmp/cert_config"]
 
   # Configure Docker daemon for TLS on port 2376
-  - ["sh", "-c", "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:2376\", \"unix:///var/run/docker.sock\"]}' | sudo tee /etc/docker/daemon.json"]
+  - ["sh", "-c", "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:2376\", \"unix:///var/run/docker.sock\"]}' > /etc/docker/daemon.json"]
 
-  # Restart Docker to apply new configuration
-  - ["sh", "-c", "sudo systemctl restart docker"]
+
+  # Reload systemd and restart Docker to apply changes
+  - ["sh", "-c", "systemctl daemon-reload"]
+  - ["sh", "-c", "systemctl restart docker"]
 
