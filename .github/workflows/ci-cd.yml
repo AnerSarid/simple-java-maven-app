@@ -71,12 +71,24 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         
-    - name: Check Ubuntu Version
-      run: lsb_release -a
-    - name: Check TLS and Cipher Suite Compatibility
+    # Add a health check loop for Docker Service
+    - name: Check Docker Service Health
       run: |
-        openssl version
-        openssl ciphers -v | grep TLSv1.2
+        echo "Checking if Docker daemon is ready..."
+        max_retries=5
+        wait_seconds=10
+        attempt=0
+        while ! curl -k https://$EC2_IP:443
+        do
+          attempt=$((attempt + 1))
+          if [ "$attempt" -eq "$max_retries" ]; then
+            echo "Docker daemon not ready after $max_retries attempts. Exiting."
+            exit 1
+          fi
+          echo "Waiting $wait_seconds seconds before retrying... (Attempt: $attempt)"
+          sleep $wait_seconds
+        done
+        echo "Docker daemon is ready."
 
     - name: Fetch EC2 IP Address
       run: |
