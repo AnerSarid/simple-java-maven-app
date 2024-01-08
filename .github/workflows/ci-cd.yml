@@ -87,18 +87,13 @@ jobs:
         # Set the EC2_IP environment variable
         echo "EC2_IP=$ec2_ip" >> $GITHUB_ENV
 
-    - name: Test Connectivity to EC2
-      run: |
-        curl -v https://$EC2_IP:443
-        # or using telnet
-        telnet $EC2_IP 443
-
     - name: Set up Docker Context
       run: |
         echo "Setting up Docker context with IP: $EC2_IP"
         echo "${{ secrets.DOCKER_CA_CERT }}" | base64 -d > ca.pem
         echo "${{ secrets.DOCKER_TLS_CERT }}" | base64 -d > cert.pem
         echo "${{ secrets.DOCKER_TLS_KEY }}" | base64 -d > key.pem
+        curl -v --cacert ca.pem https://$EC2_IP:443
         docker context create remote --docker "host=tcp://$EC2_IP:443,ca=ca.pem,cert=cert.pem,key=key.pem"
         docker context use remote
 
