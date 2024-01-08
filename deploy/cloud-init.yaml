@@ -11,7 +11,7 @@ runcmd:
   - ["sh", "-c", "hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)"]
 
   # Wait for network initialization and attempt to fetch public IP with retries
-  - ["sh", "-c", "sleep 30; public_ip=\"\"; for i in {1..10}; do public_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4); if [ ! -z \"$public_ip\" ]; then break; else echo \"Retry $i: Public IP not available, retrying in 15 seconds...\" >> /var/log/cloud-init-public-ip-fetch.log; sleep 15; fi; done"]
+  - ["sh", "-c", "sleep 30; public_ip=\"\"; for i in {1..10}; do public_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4); echo \"Attempt $i: Response from curl command - $public_ip\" >> /var/log/cloud-init-public-ip-fetch.log; if [ ! -z \"$public_ip\" ]; then break; else sleep 15; fi; done"]
 
   # Check if public IP was fetched, generate Server Key and CSR with IP SANs
   - ["sh", "-c", "if [ ! -z \"$public_ip\" ]; then echo '[ext]' > /tmp/cert_config && echo \"subjectAltName = IP:$public_ip\" >> /tmp/cert_config && openssl genrsa -out /etc/docker/certs/server-key.pem 4096 && openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config && openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions ext -extfile /tmp/cert_config; else echo 'Failed to fetch public IP after retries, falling back to manual setup' > /var/log/cloud-init-public-ip-error.log; fi"]
