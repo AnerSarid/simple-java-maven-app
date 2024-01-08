@@ -15,7 +15,7 @@ runcmd:
   - "if [ ! -z \"$public_ip\" ]; then echo '[ext]' > /tmp/cert_config && echo \"subjectAltName = IP:$public_ip\" >> /tmp/cert_config && openssl genrsa -out /etc/docker/certs/server-key.pem 4096 && openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config && openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions ext -extfile /tmp/cert_config && echo 'Certificates generated successfully' >> /var/log/cloud-init-certificate-generation.log; else echo 'Failed to fetch public IP after retries, falling back to manual setup' >> /var/log/cloud-init-public-ip-error.log; fi"
 
   # Configure Docker daemon for TLS
-  - "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:2376\", \"unix:///var/run/docker.sock\"]}' > /etc/docker/daemon.json"
+  - "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:443\", \"unix:///var/run/docker.sock\"]}' > /etc/docker/daemon.json"
 
   # Remove -H fd:// flag from Docker service
   - "sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service && systemctl daemon-reload"
