@@ -71,6 +71,13 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         
+    - name: Check Ubuntu Version
+      run: lsb_release -a
+    - name: Check TLS and Cipher Suite Compatibility
+      run: |
+        openssl version
+        openssl ciphers -v | grep TLSv1.2
+
     - name: Fetch EC2 IP Address
       run: |
         echo "Fetching EC2 IP Address..."
