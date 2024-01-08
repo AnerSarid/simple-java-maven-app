@@ -67,17 +67,20 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
+        
+    - name: Fetch EC2 IP Address
+      run: |
+        echo "Fetching EC2 IP Address..."
+        ec2_ip=$(terraform output ec2_instance_ip | tr -d '"' | tr -d '\n')
+        echo "Fetched EC2 IP: $ec2_ip"
     - name: Set up Docker Context
       run: |
-        ec2_ip=$(terraform output ec2_instance_ip)
-        echo "Fetched EC2 IP: $ec2_ip"
+        echo "Setting up Docker context with IP: $ec2_ip"
         echo "${{ secrets.DOCKER_CA_CERT }}" | base64 -d > ca.pem
         echo "${{ secrets.DOCKER_TLS_CERT }}" | base64 -d > cert.pem
         echo "${{ secrets.DOCKER_TLS_KEY }}" | base64 -d > key.pem
         docker context create remote --docker "host=tcp://$ec2_ip:2376,ca=ca.pem,cert=cert.pem,key=key.pem"
         docker context use remote
-
 
     - name: Deploy Docker Image
       run: |
