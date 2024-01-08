@@ -2,24 +2,72 @@
 
 runcmd:
   # Install Docker
-  - "curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh"
+  - >
+    curl -fsSL https://get.docker.com -o get-docker.sh &&
+    sh get-docker.sh
 
   # Install OpenSSL
-  - "apt-get update && apt-get install -y openssl"
+  - >
+    apt-get update &&
+    apt-get install -y openssl
 
-  # Fetch instance hostname and public IP
-  - "hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)"
-  - "public_ip=\"\"; for i in {1..10}; do public_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4); if [ ! -z \"$public_ip\" ]; then echo \"Public IP fetched: $public_ip\" >> /var/log/cloud-init-public-ip-fetch.log; break; else echo \"Retry $i: Public IP not available, retrying...\" >> /var/log/cloud-init-public-ip-fetch.log; sleep 15; fi; done"
+  # Fetch instance hostname
+  - >
+    hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)
+
+  # Attempt to fetch public IP with retries
+  - >
+    public_ip="";
+    for i in {1..10}; do
+      public_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4);
+      if [ ! -z "$public_ip" ]; then
+        echo "Public IP fetched: $public_ip" >> /var/log/cloud-init-public-ip-fetch.log;
+        break;
+      else
+        echo "Retry $i: Public IP not available, retrying..." >> /var/log/cloud-init-public-ip-fetch.log;
+        sleep 15;
+      fi;
+    done
 
   # Generate certificates if public IP was fetched
-  - "if [ ! -z \"$public_ip\" ]; then echo '[ext]' > /tmp/cert_config && echo \"subjectAltName = IP:$public_ip\" >> /tmp/cert_config && openssl genrsa -out /etc/docker/certs/server-key.pem 4096 && openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config && openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions ext -extfile /tmp/cert_config && echo 'Certificates generated successfully' >> /var/log/cloud-init-certificate-generation.log; else echo 'Failed to fetch public IP after retries, falling back to manual setup' >> /var/log/cloud-init-public-ip-error.log; fi"
+  - >
+    if [ ! -z "$public_ip" ]; then
+      echo '[ext]' > /tmp/cert_config &&
+      echo "subjectAltName = IP:$public_ip" >> /tmp/cert_config &&
+      openssl genrsa -out /etc/docker/certs/server-key.pem 4096 &&
+      openssl req -subj "/CN=$hostname" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config &&
+      openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions ext -extfile /tmp/cert_config &&
+      echo 'Certificates generated successfully' >> /var/log/cloud-init-certificate-generation.log;
+    else
+      echo 'Failed to fetch public IP after retries, falling back to manual setup' >> /var/log/cloud-init-public-ip-error.log;
+    fi
 
-  # Configure Docker daemon for TLS
-  - "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:443\", \"unix:///var/run/docker.sock\"]}' > /etc/docker/daemon.json"
+  # Configure Docker daemon for TLS on port 443 with specific TLS versions and ciphers
+  - >
+    echo '{
+      "tls": true,
+      "tlscert": "/etc/docker/certs/server-cert.pem",
+      "tlskey": "/etc/docker/certs/server-key.pem",
+      "tlscacert": "/etc/docker/certs/ca.crt",
+      "hosts": ["tcp://0.0.0.0:443", "unix:///var/run/docker.sock"],
+      "tlsminversion": "tls1.2",
+      "tlscipher_suites": [
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_AES_256_GCM_SHA384",
+        "TLS_RSA_WITH_AES_128_GCM_SHA256"
+      ]
+    }' > /etc/docker/daemon.json
 
-  # Remove -H fd:// flag from Docker service
-  - "sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service && systemctl daemon-reload"
+  # Modify Docker service file and reload systemd
+  - >
+    sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service &&
+    systemctl daemon-reload
 
   # Restart Docker
-  - "systemctl restart docker && echo 'Docker restarted successfully' >> /var/log/cloud-init-docker-restart.log"
+  - >
+    systemctl restart docker &&
+    echo 'Docker restarted successfully' >> /var/log/cloud-init-docker-restart.log
 
