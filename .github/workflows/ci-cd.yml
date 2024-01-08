@@ -72,7 +72,7 @@ jobs:
       run: |
         echo "Fetching EC2 IP Address..."
         output=$(terraform output ec2_instance_ip)
-        ec2_ip=$(echo $output | grep -oP '(\d{1,3}\.){3}\d{1,3}')
+        ec2_ip=$(echo $output | grep -oP '(\d{1,3}\.){3}\d{1,3}' | head -n 1)
         echo "Fetched EC2 IP: $ec2_ip"
 
     - name: Set up Docker Context
