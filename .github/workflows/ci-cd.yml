@@ -71,8 +71,10 @@ jobs:
     - name: Fetch EC2 IP Address
       run: |
         echo "Fetching EC2 IP Address..."
-        ec2_ip=$(terraform output ec2_instance_ip | tr -d '"' | tr -d '\n')
+        output=$(terraform output ec2_instance_ip)
+        ec2_ip=$(echo $output | grep -oP '(\d{1,3}\.){3}\d{1,3}')
         echo "Fetched EC2 IP: $ec2_ip"
+
     - name: Set up Docker Context
       run: |
         echo "Setting up Docker context with IP: $ec2_ip"
