@@ -2,27 +2,24 @@
 
 runcmd:
   # Install Docker
-  - ["sh", "-c", "curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh"]
+  - "curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh"
 
   # Install OpenSSL
-  - ["sh", "-c", "apt-get update && apt-get install -y openssl"]
+  - "apt-get update && apt-get install -y openssl"
 
-  # Fetch instance hostname
-  - ["sh", "-c", "hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)"]
+  # Fetch instance hostname and public IP
+  - "hostname=$(curl http://169.254.169.254/latest/meta-data/local-hostname)"
+  - "public_ip=\"\"; for i in {1..10}; do public_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4); if [ ! -z \"$public_ip\" ]; then echo \"Public IP fetched: $public_ip\" >> /var/log/cloud-init-public-ip-fetch.log; break; else echo \"Retry $i: Public IP not available, retrying...\" >> /var/log/cloud-init-public-ip-fetch.log; sleep 15; fi; done"
 
-  # Wait for network initialization and attempt to fetch public IP with retries
-  - ["sh", "-c", "sleep 30; public_ip=\"\"; for i in {1..10}; do public_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4); echo \"Attempt $i: Response from curl command - $public_ip\" >> /var/log/cloud-init-public-ip-fetch.log; if [ ! -z \"$public_ip\" ]; then break; else sleep 15; fi; done"]
+  # Generate certificates if public IP was fetched
+  - "if [ ! -z \"$public_ip\" ]; then echo '[ext]' > /tmp/cert_config && echo \"subjectAltName = IP:$public_ip\" >> /tmp/cert_config && openssl genrsa -out /etc/docker/certs/server-key.pem 4096 && openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config && openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions ext -extfile /tmp/cert_config && echo 'Certificates generated successfully' >> /var/log/cloud-init-certificate-generation.log; else echo 'Failed to fetch public IP after retries, falling back to manual setup' >> /var/log/cloud-init-public-ip-error.log; fi"
 
-  # Check if public IP was fetched, generate Server Key and CSR with IP SANs
-  - ["sh", "-c", "if [ ! -z \"$public_ip\" ]; then echo '[ext]' > /tmp/cert_config && echo \"subjectAltName = IP:$public_ip\" >> /tmp/cert_config && openssl genrsa -out /etc/docker/certs/server-key.pem 4096 && openssl req -subj \"/CN=$hostname\" -sha256 -new -key /etc/docker/certs/server-key.pem -out /tmp/server.csr -config /tmp/cert_config && openssl x509 -req -days 365 -sha256 -in /tmp/server.csr -CA /etc/docker/certs/ca.crt -CAkey /etc/docker/certs/ca.key -CAcreateserial -out /etc/docker/certs/server-cert.pem -extensions ext -extfile /tmp/cert_config; else echo 'Failed to fetch public IP after retries, falling back to manual setup' > /var/log/cloud-init-public-ip-error.log; fi"]
+  # Configure Docker daemon for TLS
+  - "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:2376\", \"unix:///var/run/docker.sock\"]}' > /etc/docker/daemon.json"
 
-  # Configure Docker daemon for TLS on port 2376
-  - ["sh", "-c", "echo '{\"tls\": true, \"tlscert\": \"/etc/docker/certs/server-cert.pem\", \"tlskey\": \"/etc/docker/certs/server-key.pem\", \"tlscacert\": \"/etc/docker/certs/ca.crt\", \"hosts\": [\"tcp://0.0.0.0:2376\", \"unix:///var/run/docker.sock\"]}' > /etc/docker/daemon.json"]
+  # Remove -H fd:// flag from Docker service
+  - "sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service && systemctl daemon-reload"
 
-  # Modify Docker service file to remove -H fd:// flag and reload systemd
-  - ["sh", "-c", "sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service"]
-  - ["sh", "-c", "systemctl daemon-reload"]
-
-  # Restart Docker to apply new configuration
-  - ["sh", "-c", "systemctl restart docker"]
+  # Restart Docker
+  - "systemctl restart docker && echo 'Docker restarted successfully' >> /var/log/cloud-init-docker-restart.log"
 
