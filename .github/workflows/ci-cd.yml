@@ -84,24 +84,22 @@ jobs:
         output=$(terraform output ec2_instance_ip)
         ec2_ip=$(echo $output | grep -oP '(\d{1,3}\.){3}\d{1,3}' | head -n 1)
         echo "Fetched EC2 IP: $ec2_ip"
-        # Set the EC2_IP environment variable
         echo "EC2_IP=$ec2_ip" >> $GITHUB_ENV
 
     - name: Set up Docker Context
       run: |
         echo "Setting up Docker context with IP: $EC2_IP"
-        echo "${{ secrets.DOCKER_CA_CERT }}" | base64 -d > ca.pem
+        echo "${{ secrets.DOCKER_CA_CERT }}" | base64 -d > ca.crt
         echo "${{ secrets.DOCKER_TLS_CERT }}" | base64 -d > cert.pem
         echo "${{ secrets.DOCKER_TLS_KEY }}" | base64 -d > key.pem
-        curl -v --cacert ca.pem https://$EC2_IP:443
-        docker context create remote --docker "host=tcp://$EC2_IP:443,ca=ca.pem,cert=cert.pem,key=key.pem"
+        docker context create remote --docker "host=tcp://$EC2_IP:443,ca=ca.crt,cert=cert.pem,key=key.pem"
         docker context use remote
 
     - name: Debugging Docker Context
       run: |
         docker context ls
         docker context inspect remote
-        cat ca.pem
+        cat ca.crt
         cat cert.pem
         cat key.pem
 
