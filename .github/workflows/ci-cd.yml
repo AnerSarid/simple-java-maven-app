@@ -70,6 +70,14 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Fetch EC2 IP Address
+      run: |
+        echo "Fetching EC2 IP Address..."
+        output=$(terraform output ec2_instance_ip)
+        ec2_ip=$(echo $output | grep -oP '(\d{1,3}\.){3}\d{1,3}' | head -n 1)
+        echo "Fetched EC2 IP: $ec2_ip"
+        echo "EC2_IP=$ec2_ip" >> $GITHUB_ENV
         
     # Add a health check loop for Docker Service
     - name: Check Docker Service Health
@@ -89,15 +97,7 @@ jobs:
           sleep $wait_seconds
         done
         echo "Docker daemon is ready."
-
-    - name: Fetch EC2 IP Address
-      run: |
-        echo "Fetching EC2 IP Address..."
-        output=$(terraform output ec2_instance_ip)
-        ec2_ip=$(echo $output | grep -oP '(\d{1,3}\.){3}\d{1,3}' | head -n 1)
-        echo "Fetched EC2 IP: $ec2_ip"
-        echo "EC2_IP=$ec2_ip" >> $GITHUB_ENV
-
+        
     - name: Set up Docker Context
       run: |
         echo "Setting up Docker context with IP: $EC2_IP"
