@@ -70,7 +70,7 @@ jobs:
 
     - name: Set up Docker Context
       run: |
-        ec2_ip=$(terraform output -raw ec2_instance_ip)
+        ec2_ip=$(terraform output ec2_instance_ip)
         echo "Fetched EC2 IP: $ec2_ip"
         echo "${{ secrets.DOCKER_CA_CERT }}" | base64 -d > ca.pem
         echo "${{ secrets.DOCKER_TLS_CERT }}" | base64 -d > cert.pem
