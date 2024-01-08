@@ -87,6 +87,12 @@ jobs:
         # Set the EC2_IP environment variable
         echo "EC2_IP=$ec2_ip" >> $GITHUB_ENV
 
+    - name: Test Connectivity to EC2
+      run: |
+        curl -v https://$EC2_IP:443
+        # or using telnet
+        telnet $EC2_IP 443
+
     - name: Set up Docker Context
       run: |
         echo "Setting up Docker context with IP: $EC2_IP"
@@ -95,6 +101,14 @@ jobs:
         echo "${{ secrets.DOCKER_TLS_KEY }}" | base64 -d > key.pem
         docker context create remote --docker "host=tcp://$EC2_IP:443,ca=ca.pem,cert=cert.pem,key=key.pem"
         docker context use remote
+
+    - name: Debugging Docker Context
+      run: |
+        docker context ls
+        docker context inspect remote
+        cat ca.pem
+        cat cert.pem
+        cat key.pem
 
     - name: Deploy Docker Image
       run: |
