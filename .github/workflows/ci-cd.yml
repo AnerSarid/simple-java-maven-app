@@ -79,14 +79,21 @@ jobs:
         echo "Fetched EC2 IP: $ec2_ip"
         echo "EC2_IP=$ec2_ip" >> $GITHUB_ENV
         
-    # Add a health check loop for Docker Service
+    - name: Set up Docker Context
+      run: |
+        echo "Setting up Docker context with IP: $EC2_IP"
+        echo "${{ secrets.DOCKER_CA_CERT }}" | base64 -d > ca.crt
+        echo "${{ secrets.DOCKER_TLS_CERT }}" | base64 -d > cert.pem
+        echo "${{ secrets.DOCKER_TLS_KEY }}" | base64 -d > key.pem
+        docker context create remote --docker "host=tcp://$EC2_IP:443,ca=ca.crt,cert=cert.pem,key=key.pem"
+        docker context use remote
     - name: Check Docker Service Health
       run: |
         echo "Checking if Docker daemon is ready..."
         max_retries=5
         wait_seconds=10
         attempt=0
-        while ! curl -k https://$EC2_IP:443
+        while ! docker info
         do
           attempt=$((attempt + 1))
           if [ "$attempt" -eq "$max_retries" ]; then
@@ -97,15 +104,9 @@ jobs:
           sleep $wait_seconds
         done
         echo "Docker daemon is ready."
-        
-    - name: Set up Docker Context
-      run: |
-        echo "Setting up Docker context with IP: $EC2_IP"
-        echo "${{ secrets.DOCKER_CA_CERT }}" | base64 -d > ca.crt
-        echo "${{ secrets.DOCKER_TLS_CERT }}" | base64 -d > cert.pem
-        echo "${{ secrets.DOCKER_TLS_KEY }}" | base64 -d > key.pem
-        docker context create remote --docker "host=tcp://$EC2_IP:443,ca=ca.crt,cert=cert.pem,key=key.pem"
-        docker context use remote
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
     - name: Debugging Docker Context
       run: |
