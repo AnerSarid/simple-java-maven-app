@@ -90,7 +90,7 @@ jobs:
     - name: Check Docker Service Health
       run: |
         echo "Checking if Docker daemon is ready..."
-        max_retries=5
+        max_retries=12
         wait_seconds=10
         attempt=0
         while ! docker info
