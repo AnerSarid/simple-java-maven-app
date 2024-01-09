@@ -87,6 +87,7 @@ jobs:
         echo "${{ secrets.DOCKER_TLS_KEY }}" | base64 -d > key.pem
         docker context create remote --docker "host=tcp://$EC2_IP:443,ca=ca.crt,cert=cert.pem,key=key.pem"
         docker context use remote
+        
     - name: Check Docker Service Health
       run: |
         echo "Checking if Docker daemon is ready..."
@@ -107,14 +108,6 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-    - name: Debugging Docker Context
-      run: |
-        docker context ls
-        docker context inspect remote
-        cat ca.crt
-        cat cert.pem
-        cat key.pem
 
     - name: Deploy Docker Image
       run: |
