@@ -25,14 +25,12 @@ resource "aws_security_group" "instance_sg" {
 }
 
 resource "aws_instance" "example" {
-  ami           = "ami-0a3411455bb49128a"
+  ami           = var.ami_id
   instance_type = var.instance_type
-  key_name		= "ssh_key_1"
+  key_name      = var.ssh_key_name
   security_groups = [aws_security_group.instance_sg.name]
-  user_data = file("${path.module}/cloud-init.yaml")
-  tags = {
-    Name = "simple_java"
-  }
+  user_data    = var.user_data
+  tags         = merge(var.tags, { Name = "simple_java" })
 }
 
 

@@ -23,7 +23,30 @@ variable "ingress_rules" {
   }))
   default = [
     { from_port = 22, to_port = 22, protocol = "tcp", cidrs = ["0.0.0.0/0"] },
-    { from_port = 8080, to_port = 8080, protocol = "tcp", cidrs = ["0.0.0.0/0"] },
     { from_port = 443, to_port = 443, protocol = "tcp", cidrs = ["0.0.0.0/0"] }
   ]
 }
+
+variable "ami_id" {
+  description = "AMI ID for the EC2 instance"
+  type        = string
+}
+
+variable "ssh_key_name" {
+  description = "SSH Key name for the EC2 instance"
+  type        = string
+  default     = null
+}
+
+variable "user_data" {
+  description = "User data to initialize the EC2 instance"
+  type        = string
+  default     = ""
+}
+
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {}
+}
+
