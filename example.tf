@@ -15,7 +15,7 @@ module "aws_ec2_instance" {
   security_group_name = "java-security"
   ami_id              = "ami-0a3411455bb49128a"
   ssh_key_name        = "ssh_key_1"
-  user_data           = file("${path.module}/cloud-init.yaml")
+  user_data           = file("${path.module}/deploy/cloud-init.yaml")
   tags                = {}
   # ... other variables ...
 }
